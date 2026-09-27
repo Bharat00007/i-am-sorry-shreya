@@ -104,11 +104,46 @@
   .hint{margin-top:1.8rem;font-size:.85rem;color:var(--ink-soft);letter-spacing:.04em;opacity:.85;}
 
   .envelope-wrap.opening{animation:none;}
+  .envelope-wrap.clicked{animation:envelope-click .55s cubic-bezier(.2,.9,.3,1.25) both;}
+  @keyframes envelope-click{
+    0%{transform:scale(1) translateY(0);}
+    35%{transform:scale(.94) translateY(2px);}
+    70%{transform:scale(1.025) translateY(-3px);}
+    100%{transform:scale(1) translateY(0);}
+  }
+  .envelope-wrap.clicked .envelope{filter:drop-shadow(0 0 18px var(--glow)) drop-shadow(0 26px 38px rgba(90,45,45,.28));}
   .flap{transform-origin:top center;transition:transform 1.1s cubic-bezier(.6,0,.2,1);}
   .opening .flap{transform:rotateX(155deg);}
   .letter-peek{transition:transform 1.2s cubic-bezier(.2,.7,.3,1) .35s, opacity .6s ease .35s;}
   .opening .letter-peek{transform:translateY(-70px);opacity:0;}
   .opening .envelope{filter:drop-shadow(0 34px 50px rgba(90,45,45,.32));}
+
+  .heart-journey{
+    position:fixed;left:var(--heart-start-x);top:var(--heart-start-y);z-index:7;
+    pointer-events:none;color:#d8848d;font-size:clamp(2.2rem,8vw,4.2rem);line-height:1;
+    text-shadow:0 0 10px rgba(244,177,181,.85),0 0 28px rgba(210,117,126,.55);
+    transform:translate(-50%,-50%) scale(.2);opacity:0;
+    animation:heart-journey 1.8s cubic-bezier(.2,.72,.25,1) forwards;
+  }
+  @keyframes heart-journey{
+    0%{opacity:0;transform:translate(-50%,-50%) scale(.2);}
+    12%{opacity:1;transform:translate(-50%,-50%) scale(.55);}
+    58%{opacity:1;transform:translate(calc(-50% + (50vw - var(--heart-start-x))),calc(-50% + (50vh - var(--heart-start-y)))) scale(1.08);}
+    68%{opacity:1;transform:translate(calc(-50% + (50vw - var(--heart-start-x))),calc(-50% + (50vh - var(--heart-start-y)))) scale(1.2);}
+    78%{opacity:1;transform:translate(calc(-50% + (50vw - var(--heart-start-x))),calc(-50% + (50vh - var(--heart-start-y)))) scale(1.5);}
+    92%{opacity:1;filter:drop-shadow(0 0 24px rgba(244,177,181,.8));transform:translate(calc(-50% + (50vw - var(--heart-start-x))),calc(-50% + (50vh - var(--heart-start-y)))) scale(110);}
+    100%{opacity:0;filter:drop-shadow(0 0 42px rgba(244,177,181,.95));transform:translate(calc(-50% + (50vw - var(--heart-start-x))),calc(-50% + (50vh - var(--heart-start-y)))) scale(135);}
+  }
+  .heart-journey i{position:absolute;font-style:normal;font-size:.28em;color:#e9a2a7;opacity:0;}
+  .heart-journey i:nth-child(1){left:-1.5em;top:-.6em;animation:heart-sparkle 1.55s ease-out .25s forwards;}
+  .heart-journey i:nth-child(2){right:-1.4em;top:-.1em;animation:heart-sparkle 1.65s ease-out .35s forwards;}
+  .heart-journey i:nth-child(3){left:-1em;bottom:-.7em;animation:heart-sparkle 1.5s ease-out .45s forwards;}
+  .heart-journey i:nth-child(4){right:-.9em;bottom:-.6em;animation:heart-sparkle 1.6s ease-out .55s forwards;}
+  @keyframes heart-sparkle{
+    0%{opacity:0;transform:scale(.2) translateY(8px);}
+    25%{opacity:1;transform:scale(1) translateY(0);}
+    100%{opacity:0;transform:scale(.45) translateY(-22px);}
+  }
 
   .zoom-veil{
     position:fixed;inset:0;z-index:4;background:var(--cream);
@@ -223,6 +258,7 @@
 
 <div class="petals" id="petals"></div>
 <div class="zoom-veil" id="zoomVeil"></div>
+<div class="heart-journey" id="heartJourney" aria-hidden="true">♥<i>✦</i><i>✧</i><i>✦</i><i>·</i></div>
 <audio id="bgAudio" src="Aarzu.mp3" loop preload="none"></audio>
 <button id="soundToggle" class="sound-toggle" aria-label="Toggle music">♪</button>
 
@@ -325,6 +361,7 @@
   const stage = document.getElementById('stage');
   const scene = document.getElementById('letterScene');
   const veil = document.getElementById('zoomVeil');
+  const heartJourney = document.getElementById('heartJourney');
   const audio = document.getElementById('bgAudio');
   const soundToggle = document.getElementById('soundToggle');
   let audioStarted = false;
@@ -344,6 +381,14 @@
   wrap.addEventListener('click', (e) => {
     if(wrap.classList.contains('opening')) return;
     wrap.classList.add('opening');
+    wrap.classList.add('clicked');
+    wrap.setAttribute('aria-disabled','true');
+    heartJourney.style.setProperty('--heart-start-x', `${e.clientX}px`);
+    heartJourney.style.setProperty('--heart-start-y', `${e.clientY - 12}px`);
+    heartJourney.getAnimations().forEach(animation => animation.cancel());
+    heartJourney.style.animation = 'none';
+    void heartJourney.offsetWidth;
+    heartJourney.style.animation = '';
     if(!audioStarted){
       audioStarted = true;
       audio.volume = 0.55;
@@ -355,15 +400,17 @@
         soundToggle.textContent='✕';
       });
     }
-    for(let i=0;i<6;i++){
-      setTimeout(()=>burst(e.clientX + (Math.random()*60-30), e.clientY + (Math.random()*60-30), 'sparkle'), i*90);
+    for(let i=0;i<4;i++){
+      setTimeout(()=>burst(e.clientX + (Math.random()*48-24), e.clientY + (Math.random()*48-24), 'sparkle'), i*110);
     }
-    setTimeout(() => { veil.classList.add('active'); }, 900);
-    setTimeout(() => {
+    heartJourney.addEventListener('animationend', () => {
+      veil.classList.add('active');
+      setTimeout(() => {
       stage.classList.add('hidden');
       veil.classList.remove('active');
       scene.classList.add('show');
-    }, 1500);
+      }, 450);
+    }, {once:true});
   });
 
   // reveal polaroids one by one on scroll
